@@ -7,19 +7,24 @@ import yaml
 
 db_source = """
 XMLIO:
- path: /home/oksana/CERN_sources/root-base/io/xml/
+ path: io/xml/
 MathCore:
- path: /home/oksana/CERN_sources/root-base/math/mathcore/
+ path: math/mathcore/
 Matrix:
  deps: MathCore
- path: /home/oksana/CERN_sources/root-base/math/matrix/
+ path: math/matrix/
 Quadp:
  deps: Matrix
- path: /home/oksana/CERN_sources/root-base/math/quadp/
+ path: math/quadp/
 """
 db_manifest = yaml.load(db_source)
 
+root_sources = os.environ['ROOTSOURCES']
+print("ROOT sources: ", root_sources)
 pkg_path = os.environ['ROOT_PKG_PATH']
+print("ROOT packages installation path: ", pkg_path)
+pwd_path = os.getcwd()
+print("root-get location: ", pwd_path)
 
 for pkg in db_manifest:
   if "deps" in db_manifest[pkg].keys():
@@ -29,7 +34,7 @@ for pkg in db_manifest:
     db_manifest[pkg]["deps"] = []
   db_manifest[pkg]["installed"] = os.path.isdir(os.path.join(pkg_path, pkg))
 
-#print(db_manifest)
+print(db_manifest)
 
 def install_pkg(pkg):
   if pkg not in db_manifest.keys():
@@ -44,7 +49,8 @@ def install_pkg(pkg):
       return False
   print("Installing " + pkg)
   src_dir = db_manifest[pkg]["path"]
-  ec = os.system("/home/oksana/CERN_sources/root-get/build-pkg " + pkg + " " + src_dir)
+  full_src_dir =root_sources + "/" + src_dir
+  ec = os.system(pwd_path + "/" + "build-pkg " + pkg + " " + full_src_dir)
   if ec != 0:
     print("Failed to install package")
     return False
@@ -67,6 +73,7 @@ def do_search(args):
 
 actions = {
   "-i" : do_install,
+  "--install" : do_install,
   "-l" : do_list,
   "--list" : do_list,
 }
