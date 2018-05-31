@@ -1,0 +1,29 @@
+package:
+    name: "Math"
+    packageurl: "https://github.com/root-project/math/"
+    tag: 0.9.0
+    targets:
+      target:
+        name: "Math"
+        dependencies: “gsl"
+    products:
+      package:
+        name: Math
+        targets:  Math MathCore MathMore
+      module:
+            name: MathCore
+            packageurl: "https://github.com/root-project/math/mathcore"
+            tag: 0.0.0
+            publicheaders: inc/*.h
+            sources: src/*.cxx
+            targets: MathCore
+            dependencies: ''
+      module:
+        name: MathMore
+        packageurl: "https://github.com/root-project/math/mathmore"
+        tag: 0.0.0
+        publicheaders: inc/*.h
+        sources: src/*.cxx
+        targets: MathMore
+    dependencies: ''
+    testing: ''
