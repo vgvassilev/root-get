@@ -29,5 +29,5 @@ mkdir build
 cd build
 
 cmake "-DCMAKE_INSTALL_PREFIX=$ROOT_PKG_PATH/$pkg_name" "-DCMAKE_MODULE_PATH=$ROOTSYS/etc/cmake" -DCMAKE_EXPORT_COMPILE_COMMANDS=On -GNinja  ../pkg-source
-cmake --build .
-cmake --install
+cmake --debug-output --build .
+ninja -v && ninja install
