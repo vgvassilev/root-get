@@ -4,6 +4,7 @@ import argparse
 import sys
 import os
 import yaml
+import zipfile
 
 db_source = """
 ZLIB:
@@ -144,6 +145,13 @@ for pkg in db_manifest:
 
 print(db_manifest)
 
+####################################################
+def zipdir(path, ziph):
+    for root, dirs, files in os.walk(path):
+        for file in files:
+            ziph.write(os.path.join(root, file))
+
+####################################################
 def install_pkg(pkg):
   if pkg not in db_manifest.keys():
     print("Can't find package " + pkg)
@@ -157,28 +165,45 @@ def install_pkg(pkg):
       return False
   print("Installing " + pkg)
   src_dir = db_manifest[pkg]["path"]
-  full_src_dir =root_sources + "/" + src_dir
-  ec = os.system(pwd_path + "/" + "build-pkg " + pkg + " " + full_src_dir)
-  if ec != 0:
-    print("Failed to install package")
+  full_src_dir = root_sources + "/" + src_dir
+# Buiding packages
+  ecbuild = os.system(pwd_path + "/" + "build-pkg " + pkg + " " + full_src_dir)
+  if ecbuild != 0:
+    print("Failed to build package")
     return False
+# Preparing packages
+  ecpackaging = os.system(pwd_path + "/" + "prepare-pkg " + pkg)
+  if ecpackaging != 0:
+    print("Failed to create package")
+    return False
+# Installing packages
+  ecinstall = os.system(pwd_path + "/" + "install-pkg " + pkg)
+  if ecinstall != 0:
+    print("Failed to install package in zip format")
+    ecinstallninja = os.system(pwd_path + "/" + "install-pkg-ninja " + pkg)
+    if ecinstallninja != 0:
+        print("Failed to install package using build system")
+        return False
   db_manifest[pkg]["installed"] = True
   return True
-
+#########################################################
 def do_install(args):
   if not install_pkg(args[0]):
     exit(1)
   pass
 
+#########################################################
 def do_list(args):
   for pkg in list(db_manifest.keys()):
     print(pkg)
   pass
 
+#########################################################
 def do_search(args):
   print(args)
   pass
 
+#########################################################
 actions = {
   "-i" : do_install,
   "--install" : do_install,
