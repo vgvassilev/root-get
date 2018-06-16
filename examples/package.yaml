@@ -9,15 +9,15 @@ package:
     products:
       package:
         name: Math
-        targets:  Math MathCore MathMore
+        targets: Math MathCore MathMore
       module:
-            name: MathCore
-            packageurl: "https://github.com/root-project/math/mathcore"
-            tag: 0.0.0
-            publicheaders: inc/*.h
-            sources: src/*.cxx
-            targets: MathCore
-            dependencies: ''
+        name: MathCore
+        packageurl: "https://github.com/root-project/math/mathcore"
+        tag: 0.0.0
+        publicheaders: inc/*.h
+        sources: src/*.cxx
+        targets: MathCore
+        dependencies: ''
       module:
         name: MathMore
         packageurl: "https://github.com/root-project/math/mathmore"
@@ -25,5 +25,5 @@ package:
         publicheaders: inc/*.h
         sources: src/*.cxx
         targets: MathMore
-    dependencies: ''
-    testing: ''
+        dependencies: ''
+        testing: ''
