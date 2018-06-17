@@ -16,5 +16,4 @@ fi
 pkg_name="$1"
 cd ~/.cache/root-pkgs/$pkg_name/build
 
-#cmake "-DCMAKE_INSTALL_PREFIX=$ROOT_PKG_PATH/$pkg_name" "-DCMAKE_MODULE_PATH=$ROOTSYS/etc/cmake" -DCMAKE_EXPORT_COMPILE_COMMANDS=On -GNinja  ../pkg-source
 ninja install
