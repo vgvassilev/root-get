@@ -12,6 +12,6 @@ class Path4pkg(object):
     def path4pkg(self, dirname, directory=''):
         dirname = dirname.lower()
         for root, dirs, names in os.walk(directory):
-            if dirname in dirs:
-                return os.path.join(root, dirname)
-        raise 'We work only with ROOT packages by now'
+            if dirname in dirs or dirname.strip("io") in dirs:
+                return os.path.join(root, dirname.strip("io"))
+        raise Exception('We work only with ROOT packages by now')
