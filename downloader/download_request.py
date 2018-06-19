@@ -12,9 +12,13 @@ class Downloader_request(object):
 
     # FIXME: next step is to move to PyGithub
     def download_github(self):
-        Repo.clone_from(self.url, self.dir)
+        repository = re.findall(r'/(\w+)', self.url)[-1]
+        print("We would like to download {0:s}".format(repository))
+        git_directory = self.dir + "/" + repository
+        Repo.clone_from(self.url, git_directory)
         print("Cloning from github %s", self.url)
 
+    # FIXME: non finished routine
     def download_zip(self):
         wget.download(self.url, self.dir)
         print("Downloading from http/https %s", self.url)
@@ -24,12 +28,11 @@ class Downloader_request(object):
         request.get_method = lambda : 'HEAD'
         try:
             response = urllib2.urlopen(request)
-            return True
         except urllib2.HTTPError:
             return False
         # check if we have github link
         match = re.search('github', self.url)
         if match:
-            download_github(self.url, self.dir)
+            self.download_github()
         else:
-            download_zip(self.url, self.dir)
+            self.download_zip()
