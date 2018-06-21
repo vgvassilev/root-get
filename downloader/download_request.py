@@ -1,7 +1,5 @@
-import wget
-import urllib2
+import wget, os, urllib2, re, zipfile
 from git import Repo
-import re
 
 class Downloader_request(object):
     """Constructor for Downloader_request."""
@@ -15,13 +13,19 @@ class Downloader_request(object):
         repository = re.findall(r'/(\w+)', self.url)[-1]
         print("We would like to download {0:s}".format(repository))
         git_directory = self.dir + "/" + repository
-        Repo.clone_from(self.url, git_directory)
-        print("Cloning from github %s", self.url)
+        if not os.path.exists(git_directory):
+            Repo.clone_from(self.url, git_directory)
+            print("Cloning from github {0:s}".format(self.url))
 
-    # FIXME: non finished routine
+    # FIXME: add better checks
     def download_zip(self):
-        wget.download(self.url, self.dir)
-        print("Downloading from http/https %s", self.url)
+        filename = wget.download(self.url, self.dir)
+        print("Downloading from http %s", self.url)
+        if filename.endswith('.zip'):
+            try:
+                zip_file = zipfile.ZipFile(filename)
+            except zipfile.BadZipfile as ex:
+                print "%s no a zip file" % file
 
     def resolving_download(self):
         request = urllib2.Request(self.url)
@@ -31,8 +35,9 @@ class Downloader_request(object):
         except urllib2.HTTPError:
             return False
         # check if we have github link
-        match = re.search('github', self.url)
-        if match:
+        if re.search('github.com', self.url):
             self.download_github()
-        else:
+        elif re.search('.zip', self.url):
             self.download_zip()
+        else:
+            print(" We work only with github repositories and zip files ")

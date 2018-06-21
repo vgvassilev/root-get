@@ -149,6 +149,7 @@ class Db4pkg():
         DBgen.dbgenerator()
 	global dbval
 	dbval = DBgen.clean_deps()
+        db_manifest = []
         with open("manifest.yml") as stream:
             try:
                 db_manifest = yaml.load(stream)
