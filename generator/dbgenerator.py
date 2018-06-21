@@ -10,42 +10,75 @@ class Dbgenerator(object):
 		self.arg = arg
 
 	def dbgenerator(self):
-		#cwd = os.getcwd()
-		#rootdir = cwd + "/build"
 		rootdir = home + "/.cache/root-pkgs/"
-
-		rule1 = re.compile('.*name:.*')
-		rule2 = re.compile('.*deps:.*')
-		rule3 = re.compile('.*path:.*')
+		""" Set of rules to be used for generator of package DB """
+		rule_name = re.compile('.*name:.*')
+		rule_package_url = re.compile('.*packageurl:.*')
+		rule_tag = re.compile('.*tag:.*')
+		rule_path = re.compile('.*path:.*')
+		rule_ph = re.compile('.*publicheaders:.*')
+		rule_sources = re.compile('.*sources:.*')
+		rule_targets = re.compile('.*targets:.*')
+		rule_deps = re.compile('.*deps:.*')
 
 		for subdir, dirs, files in os.walk(rootdir):
 			for file in files:
-#				if file.endswith(".yml"):
 				if file == "module.yml":
 					fp = os.path.join(subdir, file)
 					with open(fp) as t:
 						fl = t.read()
-						r1 = rule1.findall(fl)
-						r1 = [x.strip(' name: ') for x in r1]
-						r2 = rule2.findall(fl)
-						r3 = rule3.findall(fl)
-						if r1:
+						names = rule_name.findall(fl)
+						parcing_rule_name = [x.strip(' name: ') for x in names]
+						if parcing_rule_name:
 							fl2 = open("manifest.yml", 'a')
-							fl2.write(",".join(r1))
+							fl2.write(",".join(parcing_rule_name))
 							fl2.write(":")
 							fl2.write("\n")
-						if r2:
+						rule_tag_check = rule_tag.findall(fl)
+						if rule_tag_check:
 							fl2 = open("manifest.yml", 'a')
-							fl2.write(",".join(r2))
+							fl2.write(",".join(rule_tag_check))
+							#fl2.write(":")
 							fl2.write("\n")
-						if r3:
+						rule_package_url_check = rule_package_url.findall(fl)
+						if rule_package_url_check:
 							fl2 = open("manifest.yml", 'a')
-							fl2.write(",".join(r3))
+							fl2.write(",".join(rule_package_url_check))
+							#fl2.write(":")
+							fl2.write("\n")
+						rule_ph_check = rule_ph.findall(fl)
+						if rule_ph_check:
+							fl2 = open("manifest.yml", 'a')
+							fl2.write(",".join(rule_ph_check))
+							#fl2.write(":")
+							fl2.write("\n")
+						rule_sources_check = rule_sources.findall(fl)
+						if rule_sources_check:
+							fl2 = open("manifest.yml", 'a')
+							fl2.write(",".join(rule_sources_check))
+							#fl2.write(":")
+							fl2.write("\n")
+						rule_targets_check = rule_targets.findall(fl)
+						if rule_targets_check:
+							fl2 = open("manifest.yml", 'a')
+							fl2.write(",".join(rule_targets_check))
+							#fl2.write(":")
+							fl2.write("\n")
+						rule_deps_check = rule_deps.findall(fl)
+						if rule_deps_check:
+							fl2 = open("manifest.yml", 'a')
+							fl2.write(",".join(rule_deps_check))
+							#fl2.write(":")
+							fl2.write("\n")
+						rule_path_check = rule_path.findall(fl)
+						if rule_path_check:
+							fl2 = open("manifest.yml", 'a')
+							fl2.write(",".join(rule_path_check))
+							#fl2.write(":")
 							fl2.write("\n")
 
 	def clean_deps(self):
 		wd = os.getcwd()
-
 		rl = re.compile(".*deps:.*")
 
 		with open(wd+"/manifest.yml", 'r') as file:
@@ -66,4 +99,3 @@ class Dbgenerator(object):
 				return "no_deps"
 			else:
 				return "deps"
-

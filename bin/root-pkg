@@ -35,8 +35,9 @@ def install_pkg(pkg):
 # Checkout packages if we have them in ROOT
 # FIXME: could be more then one package(e.g. test dir)
 #
-  check = os.system('find %s -type d  -name "%s"' % (root_sources, pkg))
-  if check != 0:
+  check_package = os.system('find %s -maxdepth 1 -type d  -name "%s" ! -path "*tutorials*" ! -path "*dictpch*"' % (root_sources, pkg))
+  check_module = os.system('find %s -mindepth 2 -type d  -name "%s" ! -path "*tutorials*" ! -path "*dictpch*"' % (root_sources, pkg))
+  if check_module != 0:
     print("Not a ROOT package (we are working only with ROOT packages for now.)")
     return False
   else:
@@ -54,6 +55,7 @@ def install_pkg(pkg):
 # Building DB
 #
   db = Db4pkg()
+  """ We can use either db.hardcoded_db() or db.generated_manifest()."""
 #  db_manifest = db.hardcoded_db()
   db_manifest = db.generated_manifest()
   if not db_manifest:
@@ -62,11 +64,7 @@ def install_pkg(pkg):
   # WIP
   dag_manifest = db.pre_dag(db_manifest)
   print json.dumps(db_manifest, indent = 4)
-#
-# Download files
-#
-  download = Downloader_request("https://github.com/CocoaPods/CocoaPods", root_cache)
-  download.resolving_download()
+
 #
 # Parcing packages in db_manifest
 #
@@ -80,19 +78,23 @@ def install_pkg(pkg):
    db_manifest[pkg_index]["installed"] = os.path.isdir(os.path.join(pkg_path, pkg_index))
 
 #
+# Download files
+#
+#  download = Downloader_request("https://github.com/CocoaPods/CocoaPods", root_cache)
+#  download.resolving_download()
+
+#
 # resolving DAG from db_manifest
 #
-# WIP
   dag = Dag4pkg()
   dag.from_dict(dag_manifest)
   #try:
   dag.topological_sort()
-  print(dag.all_leaves())
+  #print(dag.all_leaves())
   #except:
   #print('-> Missing package: {0:s}'.format(traceback.print_exc()))
   if not dag.validate()[0]:
     print("Failed to generate Dag")
-    return False
 #
 # Buiding packages
 #
@@ -102,10 +104,13 @@ def install_pkg(pkg):
 
   if db_manifest[pkg]["installed"] == True:
     return True
-  for dep in db_manifest[pkg]["deps"]:
-    print("Installing dependences " + dep)
-    if not install_pkg(dep):
-        return False
+  if db_manifest[pkg]["deps"]:
+    for dep in db_manifest[pkg]["deps"]:
+        print("Installing dependences " + dep)
+        if not install_pkg(dep):
+            return False
+
+  # FIXME: Searching for any case of naming of PKG/pkg/PkG/pKg
 
   print("Installing " + pkg)
   src_dir = db_manifest[pkg]["path"]
