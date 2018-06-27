@@ -1,0 +1,249 @@
+#!/usr/bin/env python
+
+import argparse
+import sys
+import os
+import yaml
+import zipfile
+import json
+import re
+from difflib import get_close_matches
+
+# FIXME: We need to be in root-get home dir before calling this script
+# FIXME: pwd_path should be
+sys.path.append(os.getcwd())
+# Import classes from root-get directories
+from resolver import *
+from downloader.download_request import *
+from analyzer.path4pkg import *
+from integrator.zip4pkg import *
+
+# Enviroment variables
+from os.path import expanduser
+home = expanduser("~")
+os.environ["ROOT_PKG_CACHE"] = home + "/.cache/root-pkgs/"
+root_cache = os.environ["ROOT_PKG_CACHE"]
+print("[root-get] root-get cache: ", root_cache)
+root_sources = os.environ['ROOTSOURCES']
+print("[root-get] ROOT sources: ", root_sources)
+pkg_path = os.environ['ROOT_PKG_PATH']
+print("[root-get] ROOT packages installation path: ", pkg_path)
+pwd_path = os.getcwd()
+print("[root-get] root-get location: ", pwd_path)
+
+def install_pkg(pkg):
+  src_dir_root = ''
+#
+# Checkout packages if we have them in ROOT
+#
+  rule_name = re.compile('.*name:.*')
+  os.system("find " + root_sources + " -iname \*" + pkg + "\* > temp.txt")
+  with open("temp.txt") as t:
+    fe = t.read()
+    fe = fe.strip("\n")
+    with open(fe) as f:
+      #print(f.read())
+      f2 = f.read()
+      f2 = f2.strip("\n")
+      names = rule_name.findall(f2)
+      #print(names)
+      parcing_rule_name = [x.strip(' name: ') for x in names]
+#      print(parcing_rule_name)
+      if parcing_rule_name:
+        if parcing_rule_name[0] == pkg:
+          pass
+        else:
+          print("did you mean " + parcing_rule_name[0] + " ?")
+          #print("please enter Y/N...")
+          inp = raw_input("please enter Y/N...")
+        #a = str(a)
+          if inp=="Y" or inp=="y":
+            pkg = parcing_rule_name[0]
+          else:
+            exit(0)
+
+  os.remove("temp.txt")
+
+#  os.system(pwd_path+"/bin/scr " + pkg)
+  check_package = os.system('find %s -maxdepth 1 -type d  -name "%s" ! -path "*tutorials*" ! -path "*dictpch*"' % (root_sources, pkg))
+  check_module = os.system('find %s -mindepth 2 -type d  -name "%s" ! -path "*tutorials*" ! -path "*dictpch*"' % (root_sources, pkg))
+  if check_module != 0:
+    print("Not a ROOT package (we are working only with ROOT packages for now.)")
+    return False
+  else:
+    # if have such direcory in root then we can try to get it's real path
+    path = Path4pkg()
+    src_dir_root = path.path4pkg(pkg, root_sources)
+    print("[root-get] We would  use a package from {0:s}".format(src_dir_root))
+#
+# Analyzing packages
+#
+  ecanalyze = os.system(pwd_path + "/analyzer/preparing-environment-for-pkg " + pkg + " " + src_dir_root)
+  if ecanalyze != 0:
+    print("[root-get] Failed to configure package")
+    return False
+#
+# Building DB
+#
+  db = Db4pkg()
+  """ We can use either db.hardcoded_db() or db.generated_manifest()."""
+#  db_manifest = db.hardcoded_db()
+  db_manifest = db.generated_manifest()
+  if not db_manifest:
+    print("[root-get] Failed to generate DB")
+    return False
+  # WIP
+  dag_manifest = db.pre_dag(db_manifest)
+  print json.dumps(db_manifest, indent = 4)
+
+#
+# Parcing packages in db_manifest
+#
+  for pkg_index in db_manifest:
+   if "deps" in db_manifest[pkg_index]:
+     if type(db_manifest[pkg_index]["deps"]) == str:
+       db_manifest[pkg_index]["deps"] = db_manifest[pkg_index]["deps"].split()
+   else:
+     db_manifest[pkg_index]["deps"] = []
+   db_manifest[pkg_index]["installed"] = os.path.isdir(os.path.join(pkg_path, pkg_index))
+
+#
+# Download files
+#
+#  download = Downloader_request("https://github.com/CocoaPods/CocoaPods", root_cache)
+#  download.resolving_download()
+
+#
+# resolving DAG from db_manifest
+#
+  dag = Dag4pkg()
+  dag.from_dict(dag_manifest)
+  #try:
+  dag.topological_sort()
+  #print(dag.all_leaves())
+  #except:
+  #print('-> Missing package: {0:s}'.format(traceback.print_exc()))
+  #if not dag.validate()[0]:
+    #for value in db_manifest[pkg]["deps"]:
+        #if(not db_manifest[value]) or (not db_manifest[value]["installed"])
+            #check_package = os.system('find %s -maxdepth 1 -type d  -name "%s" ! -path "*tutorials*" ! -path "*dictpch*"' % (root_sources, value))
+
+  if db_manifest[pkg]["deps"] is not None:
+     for dep in db_manifest[pkg]["deps"]:
+        print("[root-get] Installing dependence " + dep)
+        if not install_pkg(dep):
+            return False
+        else:
+            print("[root-get] Dependency {0:s} is sucessfully installed and deployed".format(dep))
+  else:
+     print("[root-get] No dependencies for {0:s} ".format(pkg))
+#
+# Buiding packages
+#
+  """ Use of newly generated manifest.yml for pkg name check
+  rule = re.compile('.*targets:.*')
+
+  with open(pwd_path + "/manifest.yml") as t:
+    fl = t.read()
+    trgt = rule.findall(fl)
+    md = [x.strip(' targets: ') for x in trgt]
+
+    if get_close_matches(pkg, md):
+      print("[root-get] The package name {0:s} is available in list of targets in {1:s}, keep on working..".format(pkg, md))
+      pass
+    else:
+      sudopkg = pkg
+      if sudopkg.islower():
+        sudopkg = sudopkg.upper()
+        if get_close_matches(sudopkg, md):
+          pkg = sudopkg
+          print("[root-get] did you mean " + pkg + " ?")
+          pass
+      elif sudopkg.isupper():
+        sudopkg = sudopkg.lower()
+        if get_close_matches(sudopkg, md):
+          pkg = sudopkg
+          print("[root-get] did you mean " + pkg + " ?")
+          pass
+      else:
+         # To get mixed case chars
+        if get_close_matches(pkg,md,cutoff=0.5):
+          pkg = md[0]"""
+
+  print("[root-get] Checking package DB keys available in root-get: {0:s}".format(db_manifest.keys()))
+  if pkg not in db_manifest.keys():
+    print("[root-get] Can't find package {0:s} in DB".format(pkg))
+    return False
+
+  if db_manifest[pkg]["installed"] == True:
+    return True
+  if db_manifest[pkg]["deps"]:
+    for dep in db_manifest[pkg]["deps"]:
+        print("[root-get] Installing dependences {0:s}".format(dep))
+        if not install_pkg(dep):
+            return False
+
+  # FIXME: Searching for any case of naming of PKG/pkg/PkG/pKg
+
+  print("[root-get] Installing {0:s}".format(pkg))
+  src_dir = db_manifest[pkg]["path"]
+  full_src_dir = root_sources + "/" + src_dir
+  ecbuild = os.system(pwd_path + "/builder/build-pkg " + pkg + " " + full_src_dir)
+  if ecbuild != 0:
+    print("[root-get] Failed to build package.")
+    return False
+# Preparing packages
+  ecpackaging = os.system(pwd_path + "/integrator/prepare-pkg " + pkg)
+  if ecpackaging != 0:
+    print("[root-get] Failed to create package.")
+    return False
+# Installing packages
+  ecinstall = os.system(pwd_path + "/integrator/install-pkg " + pkg)
+  if ecinstall != 0:
+    print("[root-get] Failed to install package in zip format.")
+    ecinstallninja = os.system(pwd_path + "/integrator/" + "install-pkg-ninja " + pkg)
+    if ecinstallninja != 0:
+        print("[root-get] Failed to install package using build system")
+        return False
+  db_manifest[pkg]["installed"] = True
+  return True
+#########################################################
+def do_install(args):
+  if not install_pkg(args[0]):
+    exit(1)
+  pass
+
+#########################################################
+def do_list(args):
+  db = Db4pkg()
+  db_manifest = db.generated_manifest()
+  for pkg in list(db_manifest.keys()):
+    print(pkg)
+  pass
+
+#########################################################
+def do_search(args):
+  print(args)
+  pass
+
+#########################################################
+actions = {
+  "-i" : do_install,
+  "--install" : do_install,
+  "-l" : do_list,
+  "--list" : do_list,
+}
+
+if sys.argv[1] in actions.keys():
+  actions[sys.argv[1]](sys.argv[2:])
+else:
+  print '[root-get] Error!'
+
+exit(0)
+manifest = None
+
+with open(sys.argv[1], 'r') as stream:
+  try:
+    manifest = yaml.load(stream)
+  except yaml.YAMLError as exc:
+    print(exc)
