@@ -18,24 +18,23 @@ from downloader.download_request import *
 from analyzer.path4pkg import *
 from integrator.zip4pkg import *
 
+# Enviroment variables
 from os.path import expanduser
 home = expanduser("~")
-
 os.environ["ROOT_PKG_CACHE"] = home + "/.cache/root-pkgs/"
 root_cache = os.environ["ROOT_PKG_CACHE"]
-print("root-get cache: ", root_cache)
+print("[root-get] root-get cache: ", root_cache)
 root_sources = os.environ['ROOTSOURCES']
-print("ROOT sources: ", root_sources)
+print("[root-get] ROOT sources: ", root_sources)
 pkg_path = os.environ['ROOT_PKG_PATH']
-print("ROOT packages installation path: ", pkg_path)
+print("[root-get] ROOT packages installation path: ", pkg_path)
 pwd_path = os.getcwd()
-print("root-get location: ", pwd_path)
+print("[root-get] root-get location: ", pwd_path)
 
 def install_pkg(pkg):
   src_dir_root = ''
 #
 # Checkout packages if we have them in ROOT
-# FIXME: could be more then one package(e.g. test dir)
 #
   check_package = os.system('find %s -maxdepth 1 -type d  -name "%s" ! -path "*tutorials*" ! -path "*dictpch*"' % (root_sources, pkg))
   check_module = os.system('find %s -mindepth 2 -type d  -name "%s" ! -path "*tutorials*" ! -path "*dictpch*"' % (root_sources, pkg))
@@ -46,12 +45,13 @@ def install_pkg(pkg):
     # if have such direcory in root then we can try to get it's real path
     path = Path4pkg()
     src_dir_root = path.path4pkg(pkg, root_sources)
+    print("[root-get] We would  use a package from {0:s}".format(src_dir_root))
 #
 # Analyzing packages
 #
   ecanalyze = os.system(pwd_path + "/analyzer/preparing-environment-for-pkg " + pkg + " " + src_dir_root)
   if ecanalyze != 0:
-    print("Failed to configure package")
+    print("[root-get] Failed to configure package")
     return False
 #
 # Building DB
@@ -61,7 +61,7 @@ def install_pkg(pkg):
 #  db_manifest = db.hardcoded_db()
   db_manifest = db.generated_manifest()
   if not db_manifest:
-    print("Failed to generate DB")
+    print("[root-get] Failed to generate DB")
     return False
   # WIP
   dag_manifest = db.pre_dag(db_manifest)
@@ -76,7 +76,6 @@ def install_pkg(pkg):
        db_manifest[pkg_index]["deps"] = db_manifest[pkg_index]["deps"].split()
    else:
      db_manifest[pkg_index]["deps"] = []
-   #print(db_manifest[pkg]["deps"])
    db_manifest[pkg_index]["installed"] = os.path.isdir(os.path.join(pkg_path, pkg_index))
 
 #
@@ -95,72 +94,88 @@ def install_pkg(pkg):
   #print(dag.all_leaves())
   #except:
   #print('-> Missing package: {0:s}'.format(traceback.print_exc()))
-  if not dag.validate()[0]:
-    print("Failed to generate Dag")
+  #if not dag.validate()[0]:
+    #for value in db_manifest[pkg]["deps"]:
+        #if(not db_manifest[value]) or (not db_manifest[value]["installed"])
+            #check_package = os.system('find %s -maxdepth 1 -type d  -name "%s" ! -path "*tutorials*" ! -path "*dictpch*"' % (root_sources, value))
+
+  if db_manifest[pkg]["deps"] is not None:
+     for dep in db_manifest[pkg]["deps"]:
+        print("[root-get] Installing dependence " + dep)
+        if not install_pkg(dep):
+            return False
+        else:
+            print("[root-get] Dependency {0:s} is sucessfully installed and deployed".format(dep))
+  else:
+     print("[root-get] No dependencies for {0:s} ".format(pkg))
 #
 # Buiding packages
 #
   rule = re.compile('.*targets:.*')
 
-  with open(pwd_path+"/manifest.yml") as t:
+  with open(pwd_path + "/manifest.yml") as t:
     fl = t.read()
     trgt = rule.findall(fl)
     md = [x.strip(' targets: ') for x in trgt]
 
-    if get_close_matches(pkg,md):
+    if get_close_matches(pkg, md):
+      print("[root-get] The package name {0:s} is available in list of targets in {1:s}, keep on working..".format(pkg, md))
       pass
     else:
       sudopkg = pkg
       if sudopkg.islower():
         sudopkg = sudopkg.upper()
-        if get_close_matches(sudopkg,md):
+        if get_close_matches(sudopkg, md):
           pkg = sudopkg
-          print("did you mean " + pkg + " ?")
+          print("[root-get] did you mean " + pkg + " ?")
           pass
       elif sudopkg.isupper():
         sudopkg = sudopkg.lower()
-        if get_close_matches(sudopkg,md):
+        if get_close_matches(sudopkg, md):
           pkg = sudopkg
-          print("did you mean " + pkg + " ?")
+          print("[root-get] did you mean " + pkg + " ?")
           pass
       else:
         """To get mixed case chars"""
-        if get_close_matches(pkg,md,cutoff=0.5):
-          pkg = md[0]
+        if get_close_matches(pkg, md, cutoff=0.5):
+          print("[root-get] We have mixed-symbol name of package {0:s}, it is OK".format(pkg))
+          #FIXME: wrong, it just selecting first symbol!
+          #pkg = md[0]
 
+  print("[root-get] Checking package DB keys available in root-get: {0:s}".format(db_manifest.keys()))
   if pkg not in db_manifest.keys():
-    print("Can't find package " + pkg)
+    print("[root-get] Can't find package {0:s} in DB".format(pkg))
     return False
 
   if db_manifest[pkg]["installed"] == True:
     return True
   if db_manifest[pkg]["deps"]:
     for dep in db_manifest[pkg]["deps"]:
-        print("Installing dependences " + dep)
+        print("[root-get] Installing dependences {0:s}".format(dep))
         if not install_pkg(dep):
             return False
 
   # FIXME: Searching for any case of naming of PKG/pkg/PkG/pKg
 
-  print("Installing " + pkg)
+  print("[root-get] Installing {0:s}".format(pkg))
   src_dir = db_manifest[pkg]["path"]
   full_src_dir = root_sources + "/" + src_dir
   ecbuild = os.system(pwd_path + "/builder/build-pkg " + pkg + " " + full_src_dir)
   if ecbuild != 0:
-    print("Failed to build package")
+    print("[root-get] Failed to build package.")
     return False
 # Preparing packages
   ecpackaging = os.system(pwd_path + "/integrator/prepare-pkg " + pkg)
   if ecpackaging != 0:
-    print("Failed to create package")
+    print("[root-get] Failed to create package.")
     return False
 # Installing packages
   ecinstall = os.system(pwd_path + "/integrator/install-pkg " + pkg)
   if ecinstall != 0:
-    print("Failed to install package in zip format")
+    print("[root-get] Failed to install package in zip format.")
     ecinstallninja = os.system(pwd_path + "/integrator/" + "install-pkg-ninja " + pkg)
     if ecinstallninja != 0:
-        print("Failed to install package using build system")
+        print("[root-get] Failed to install package using build system")
         return False
   db_manifest[pkg]["installed"] = True
   return True
@@ -192,7 +207,7 @@ actions = {
 if sys.argv[1] in actions.keys():
   actions[sys.argv[1]](sys.argv[2:])
 else:
-  print 'error'
+  print '[root-get] Error!'
 
 exit(0)
 manifest = None
