@@ -1,0 +1,8 @@
+module:
+  name: MathCore
+  packageurl: "https://github.com/root-project/math/mathcore"
+  tag: 0.0.0
+  publicheaders: inc/*.h
+  sources: src/*.cxx
+  targets: MathCore
+  dependencies: ''
