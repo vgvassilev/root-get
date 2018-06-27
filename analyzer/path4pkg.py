@@ -22,10 +22,8 @@ class Path4pkg(object):
             if mindepth <= depth < maxdepth:
                 if((dirname in dirs) or (dirname.strip("io") in dirs)):
                     if(dirname in directory_exceptions):
-                        print(dirname)
                         return os.path.join(dirpath, dirname)
                     else:
-                        print(dirname)
                         return os.path.join(dirpath, dirname.strip("io"))
                 #raise Exception('We work only with ROOT modules by now')
             elif depth > maxdepth:
