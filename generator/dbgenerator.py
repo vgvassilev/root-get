@@ -34,16 +34,22 @@ class Dbgenerator(object):
 							fl2.write(",".join(parcing_rule_name))
 							fl2.write(":")
 							fl2.write("\n")
+						rule_package_url_check = rule_package_url.findall(fl)
+						if rule_package_url_check:
+							fl2 = open("manifest.yml", 'a')
+							fl2.write(",".join(rule_package_url_check))
+							#fl2.write(":")
+							fl2.write("\n")
 						rule_tag_check = rule_tag.findall(fl)
 						if rule_tag_check:
 							fl2 = open("manifest.yml", 'a')
 							fl2.write(",".join(rule_tag_check))
 							#fl2.write(":")
 							fl2.write("\n")
-						rule_package_url_check = rule_package_url.findall(fl)
-						if rule_package_url_check:
+						rule_path_check = rule_path.findall(fl)
+						if rule_path_check:
 							fl2 = open("manifest.yml", 'a')
-							fl2.write(",".join(rule_package_url_check))
+							fl2.write(",".join(rule_path_check))
 							#fl2.write(":")
 							fl2.write("\n")
 						rule_ph_check = rule_ph.findall(fl)
@@ -70,12 +76,6 @@ class Dbgenerator(object):
 							fl2.write(",".join(rule_deps_check))
 							#fl2.write(":")
 							fl2.write("\n")
-						rule_path_check = rule_path.findall(fl)
-						if rule_path_check:
-							fl2 = open("manifest.yml", 'a')
-							fl2.write(",".join(rule_path_check))
-							#fl2.write(":")
-							fl2.write("\n")
 
 	def clean_deps(self):
 		wd = os.getcwd()
@@ -84,8 +84,9 @@ class Dbgenerator(object):
 		with open(wd+"/manifest.yml", 'r') as file:
 			fd = file.read()
 
-		fd = fd.replace("Core","")
-		fd = fd.replace("RIO","")
+		fd = fd.replace("Core", '')
+		fd = fd.replace("RIO", '')
+		fd = fd.replace(";", '')
 
 		with open(wd+"/manifest.yml", 'w') as file:
 			file.write(fd)
